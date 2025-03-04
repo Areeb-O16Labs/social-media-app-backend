@@ -2,7 +2,7 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Request }
 import { PostsService } from './posts.service';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
-import { ApiBearerAuth, ApiBody, ApiSecurity } from "@nestjs/swagger"
+import { ApiBearerAuth, ApiBody, ApiSecurity, ApiTags } from "@nestjs/swagger"
 import { AuthGuard } from 'src/auth/guards/auth.guard';
 
 @Controller('posts')
@@ -41,5 +41,21 @@ export class PostsController {
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.postsService.remove(id);
+  }
+
+  @ApiTags('Like')
+  @Post('Like')
+  @UseGuards(AuthGuard)
+  @ApiSecurity('access-token')
+  @ApiBody({schema: {properties: {post_id: {type: 'string'}}}})
+  like(@Request() req, @Body() body: {post_id: string}) {
+    const {post_id} = body;
+    return this.postsService.like(post_id, req.user.userId);
+  }
+
+  @ApiTags('Like')
+  @Get('Likes/:post_id')
+  getLikes(@Param('post_id') post_id: string) {
+    return this.postsService.getLikes(post_id);
   }
 }

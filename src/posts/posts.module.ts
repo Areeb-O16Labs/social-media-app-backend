@@ -4,12 +4,14 @@ import { PostsController } from './posts.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Post } from './entities/post.entity';
 import { User } from 'src/users/entities/user.entity';
+import { Like } from './entities/like.entity';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([
       Post,
-      User
+      User,
+      Like
     ]),
   ],
   controllers: [PostsController],

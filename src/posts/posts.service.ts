@@ -6,6 +6,7 @@ import { Post } from './entities/post.entity';
 import { Repository } from 'typeorm';
 import { customResponseHandler } from 'src/config/helper';
 import { User } from 'src/users/entities/user.entity';
+import { Like } from './entities/like.entity';
 
 @Injectable()
 export class PostsService {
@@ -14,6 +15,8 @@ export class PostsService {
     private readonly PostModel: Repository<Post>,
     @InjectRepository(User)
     private readonly UserModel: Repository<User>,
+    @InjectRepository(Like)
+    private readonly likeModel: Repository<Like>,
   ){}
   async create(createPostDto: CreatePostDto, user_id: string) {
     try{
@@ -32,7 +35,7 @@ export class PostsService {
   async findAll() {
     try{
       let posts : any = this.PostModel.createQueryBuilder('post');
-      posts = await posts.leftJoinAndSelect('post.user_id', 'user').orderBy('post.createdAt', 'DESC').getMany()
+      posts = await posts.leftJoinAndSelect('post.user', 'user').orderBy('post.createdAt', 'DESC').getMany()
       return customResponseHandler(posts, 'Posts fetch successfully');
     }catch(e){
       throw new InternalServerErrorException(e.message)
@@ -87,9 +90,41 @@ export class PostsService {
     try{
       console.log(await this.PostModel.find({}));
       let post : any;
-      post = await this.PostModel.createQueryBuilder('post').where('post.user_id = :id', { id }).getMany();
+      post = await this.PostModel.createQueryBuilder('post').where('post.user = :id', { id }).getMany();
       let user : any = await this.UserModel.createQueryBuilder('user').where('user.id = :id', { id }).getOne();
       return customResponseHandler({user, post}, 'Post fetch successfully');
+    }catch(e){
+      throw new InternalServerErrorException(e.message)
+    }
+  }
+
+  async like(post_id: string, user_id: string) {
+    try{
+      let post : any = await this.PostModel.findOne({where: {id: post_id}})
+      if(post){
+        let isLiked = await this.likeModel.createQueryBuilder('like').where('like.post = :post_id', { post_id }).andWhere('like.user = :user_id', { user_id }).getOne();
+        let res : any;
+        if(isLiked){
+          res = await this.likeModel.delete({id: isLiked.id});
+        }else{
+          let like = new Like();
+          like.post = post_id;
+          like.user = user_id;
+          res = await this.likeModel.save(like);
+        }
+        return customResponseHandler(res, 'Post liked/unliked successfully');
+      }
+    }catch(e){
+      throw new InternalServerErrorException(e.message)
+    }
+  } 
+
+  async getLikes(post_id: string) {
+    try{
+      let getLikes : any = await this.likeModel.createQueryBuilder('like').where('like.post = :post_id', { post_id });
+      let likes = await getLikes.leftJoinAndSelect('like.user', 'user').getMany();
+      let totalLikes = await getLikes.getCount();
+      return customResponseHandler({likes, totalLikes}, 'Likes fetch successfully');
     }catch(e){
       throw new InternalServerErrorException(e.message)
     }
